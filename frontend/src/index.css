@@ -1,0 +1,229 @@
+@import "tailwindcss";
+
+/* ── Custom Theme ───────────────────────────────────────────────────── */
+@theme {
+  --color-dark-950: #000000;
+  --color-dark-900: #070709;
+  --color-dark-850: #0c0c10;
+  --color-dark-800: #121217;
+  --color-dark-750: #181820;
+  --color-dark-700: #20202a;
+  --color-dark-600: #2a2a38;
+  --color-surface: #111116;
+  --color-surface-light: #1a1a23;
+  --color-apple-blue: #2997ff;
+  --color-apple-purple: #af52de;
+  --color-apple-cyan: #30d158;
+  --color-accent: #6366f1;
+  --color-accent-light: #818cf8;
+  --color-accent-glow: rgba(99, 102, 241, 0.15);
+  --color-success: #30d158;
+  --color-warning: #ffd60a;
+  --color-danger: #ff453a;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #27272a transparent;
+  }
+  :focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 3px;
+  }
+  body {
+    background: #000000;
+    color: #f5f5f7;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    letter-spacing: -0.015em;
+  }
+  ::selection {
+    background: rgba(41, 151, 255, 0.35);
+    color: #ffffff;
+  }
+}
+
+/* ── Apple-Grade Animations ──────────────────────────────────────────── */
+@keyframes appleFadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes appleSlideIn {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes appleScaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes siriOrbPulse {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    filter: hue-rotate(0deg) blur(20px);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.15) rotate(180deg);
+    filter: hue-rotate(90deg) blur(28px);
+    opacity: 1;
+  }
+}
+
+@keyframes siriWave {
+  0%, 100% { height: 6px; }
+  50% { height: 28px; }
+}
+
+@keyframes appleGlow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes borderGlowShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes floatSmooth {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-8px); }
+}
+
+.anim-fade-up    { animation: appleFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.anim-slide-in   { animation: appleSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.anim-scale-in   { animation: appleScaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.anim-float      { animation: floatSmooth 4s ease-in-out infinite; }
+
+.anim-delay-1 { animation-delay: 0.08s; }
+.anim-delay-2 { animation-delay: 0.16s; }
+.anim-delay-3 { animation-delay: 0.24s; }
+.anim-delay-4 { animation-delay: 0.32s; }
+.anim-delay-5 { animation-delay: 0.40s; }
+
+/* ── Apple Glass & Surfaces ─────────────────────────────────────────── */
+.apple-glass {
+  background: rgba(18, 18, 22, 0.72);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.apple-glass-nav {
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.apple-card {
+  background: linear-gradient(180deg, rgba(22, 22, 28, 0.7) 0%, rgba(12, 12, 16, 0.9) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8), 0 0 24px rgba(41, 151, 255, 0.08);
+}
+
+/* ── Apple Intelligence & Siri Gradients ────────────────────────────── */
+.apple-text-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.apple-intelligence-gradient {
+  background: linear-gradient(135deg, #2997ff 0%, #af52de 35%, #ff2d55 70%, #ff9f0a 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: borderGlowShift 6s ease infinite;
+}
+
+.apple-pill-active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+/* Siri Voice Orb Animation */
+.siri-orb-container {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.siri-orb-glow {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #2997ff 0%, #af52de 45%, #ff2d55 75%, transparent 100%);
+  animation: siriOrbPulse 4s ease-in-out infinite;
+}
+
+.siri-orb-core {
+  position: relative;
+  z-index: 2;
+  width: 80px;
+  height: 80px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #1c1c24, #0a0a0f);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 30px rgba(175, 82, 222, 0.4);
+}
+
+/* Audio wave bars */
+.audio-bar {
+  width: 3px;
+  background: linear-gradient(180deg, #2997ff, #af52de);
+  border-radius: 9999px;
+  animation: siriWave 1.2s ease-in-out infinite;
+}
+
+/* Smooth circular score progress */
+.score-ring {
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.progress-fill {
+  transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .apple-card:hover {
+    transform: none;
+  }
+}

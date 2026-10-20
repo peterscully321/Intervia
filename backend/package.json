@@ -1,0 +1,33 @@
+{
+  "name": "intervia",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "verify": "node scripts/verify-setup.js",
+    "dev:storage-emulator": "node scripts/start-storage-emulator.js",
+    "dev:firebase-emulators": "node scripts/start-firebase-emulators.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@google/genai": "^2.28.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.7",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "firebase-admin": "^14.5.0",
+    "helmet": "^8.3.0",
+    "intervia-monorepo": "file:..",
+    "jsonwebtoken": "^9.0.3",
+    "mammoth": "^1.13.0",
+    "multer": "^2.4.0",
+    "pdf-parse": "^2.4.5",
+    "pdfkit": "^0.20.2",
+    "razorpay": "^2.9.8"
+  }
+}
