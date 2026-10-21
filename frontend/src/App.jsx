@@ -171,6 +171,7 @@ export default function App() {
   const [resumeInputMode, setResumeInputMode] = useState('upload'); // 'upload' | 'text'
   const [isAnalyzingResume, setIsAnalyzingResume] = useState(false);
   const [resumeResult, setResumeResult] = useState(null);
+  const [resumeTargetRole, setResumeTargetRole] = useState('');
   const [resumeConsent, setResumeConsent] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -277,6 +278,7 @@ export default function App() {
         interviewDate: authRes.user.interviewDate || '',
         coachingPreferences: authRes.user.coachingPreferences || [],
       });
+      setResumeTargetRole(authRes.user.targetRole || '');
       setIsProfileModalOpen(!authRes.user.onboardingCompleted);
     } catch {
       setCurrentUser(null);
@@ -340,6 +342,7 @@ export default function App() {
         setResumeText('');
         setUploadedFile(null);
         setResumeResult(null);
+        setResumeTargetRole('');
         setInterviewSessionId(null);
         setInterviewResults([]);
         return;
@@ -418,6 +421,7 @@ export default function App() {
       if (result.error || !result.user) throw new Error(result.error || 'We could not save your profile. Please try again.');
       setCurrentUser(result.user);
       setRole(result.user.targetRole);
+      setResumeTargetRole(result.user.targetRole || '');
       setIsProfileModalOpen(false);
       showToast('Your practice preferences are saved.');
     } catch (error) {
@@ -654,8 +658,8 @@ export default function App() {
       try {
         const consent = await api.saveResumeConsent(true);
         if (consent.error) throw new Error(consent.error);
-        const data = await api.uploadAndAnalyzeResume(uploadedFile);
-        if (data.error) throw new Error(data.error);
+        const data = await api.uploadAndAnalyzeResume(uploadedFile, resumeTargetRole.trim());
+        if (data.error) throw new Error(data.message || data.error);
 
         setResumeResult(data);
         if (data.remaining !== undefined) setCredits(data.remaining);
@@ -677,8 +681,8 @@ export default function App() {
       try {
         const consent = await api.saveResumeConsent(true);
         if (consent.error) throw new Error(consent.error);
-        const data = await api.analyzeResume({ resumeText });
-        if (data.error) throw new Error(data.error);
+        const data = await api.analyzeResume({ resumeText, targetRole: resumeTargetRole.trim() });
+        if (data.error) throw new Error(data.message || data.error);
 
         setResumeResult(data);
         if (data.remaining !== undefined) setCredits(data.remaining);
@@ -2124,6 +2128,21 @@ export default function App() {
 
             {/* Input Card */}
             <div className="apple-card rounded-3xl p-8 space-y-6">
+
+              <div className="space-y-2">
+                <label htmlFor="resume-target-role" className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                  Target role <span className="normal-case font-normal text-zinc-500">(optional, improves the match review)</span>
+                </label>
+                <input
+                  id="resume-target-role"
+                  type="text"
+                  maxLength={120}
+                  value={resumeTargetRole}
+                  onChange={(event) => setResumeTargetRole(event.target.value)}
+                  placeholder="e.g. Product Designer, Backend Engineer, Data Analyst"
+                  className="w-full bg-zinc-900/80 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-[#30d158] transition"
+                />
+              </div>
               
               {/* Option A: File Upload */}
               {resumeInputMode === 'upload' && (
@@ -2260,17 +2279,50 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pb-6 border-b border-white/[0.08]">
                   <div className="space-y-1 text-center sm:text-left">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[#30d158] px-2.5 py-0.5 rounded-full bg-[#30d158]/10 border border-[#30d158]/20">
-                      Audit Complete {resumeResult.fileName ? `• ${resumeResult.fileName}` : ''}
+                      AI Review {resumeResult.fileName ? `• ${resumeResult.fileName}` : ''}
                     </span>
                     <h3 className="text-2xl font-bold text-white mt-2">
-                      Resume Quality: <span className="text-[#30d158]">{resumeResult.verdict || 'Strong'}</span>
+                      Resume Quality: <span className="text-[#30d158]">{resumeResult.verdict || 'Developing'}</span>
                     </h3>
                     <p className="text-xs text-zinc-400">
-                      Coaching signals based on your resume and goals. Scores are guidance, not hiring predictions.
+                      {resumeResult.wordCount ? `${resumeResult.wordCount.toLocaleString()} words analyzed` : 'Full resume analyzed'}
+                      {resumeResult.targetRole ? ` for ${resumeResult.targetRole}` : ''}. Scores are guidance, not hiring predictions.
                     </p>
                   </div>
 
                   <ScoreRing score={resumeResult.overallScore ?? 0} size={120} label="Guidance score" />
+                </div>
+
+                <div className="rounded-2xl bg-[#2997ff]/[0.06] border border-[#2997ff]/20 p-5 space-y-4">
+                  <div>
+                    <h4 className="text-xs font-bold text-[#2997ff] uppercase tracking-wider">Resume summary</h4>
+                    <p className="text-sm text-zinc-200 leading-relaxed mt-2">{resumeResult.summary}</p>
+                  </div>
+                  {resumeResult.roleFit && (
+                    <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-4 border-t border-white/[0.08] pt-4">
+                      <div className="text-center rounded-xl bg-black/20 px-5 py-3 self-start">
+                        <div className="text-2xl font-bold text-white">{resumeResult.roleFit.score}%</div>
+                        <div className="text-[10px] uppercase tracking-wider text-zinc-400">Role fit</div>
+                      </div>
+                      <div className="space-y-3">
+                        <p className="text-xs text-zinc-300 leading-relaxed">{resumeResult.roleFit.feedback}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          {resumeResult.roleFit.matchedRequirements?.length > 0 && (
+                            <div>
+                              <p className="text-[#30d158] font-semibold mb-1">Evidence that matches</p>
+                              <ul className="space-y-1 text-zinc-300">{resumeResult.roleFit.matchedRequirements.map((item, index) => <li key={index}>• {item}</li>)}</ul>
+                            </div>
+                          )}
+                          {resumeResult.roleFit.gaps?.length > 0 && (
+                            <div>
+                              <p className="text-[#ffd60a] font-semibold mb-1">Gaps or missing evidence</p>
+                              <ul className="space-y-1 text-zinc-300">{resumeResult.roleFit.gaps.map((item, index) => <li key={index}>• {item}</li>)}</ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 4 Section Scores */}
@@ -2292,7 +2344,7 @@ export default function App() {
                           style={{ width: `${sec.data?.score ?? 0}%` }}
                         />
                       </div>
-                      <p className="text-[11px] text-zinc-400 line-clamp-2 pt-1">{sec.data?.feedback}</p>
+                      <p className="text-[11px] text-zinc-400 pt-1 leading-relaxed">{sec.data?.feedback}</p>
                     </div>
                   ))}
                 </div>
@@ -2325,6 +2377,28 @@ export default function App() {
                     </ul>
                   </div>
                 </div>
+
+                {resumeResult.bulletRewrites?.length > 0 && (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-white">Experience bullet rewrites</h4>
+                      <p className="text-[11px] text-zinc-500 mt-1">These edits keep your stated facts. Add real metrics where the coach marks a placeholder.</p>
+                    </div>
+                    {resumeResult.bulletRewrites.map((rewrite, index) => (
+                      <div key={index} className="rounded-2xl border border-white/[0.08] bg-zinc-900/50 p-5 space-y-3">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-1">Your original bullet</p>
+                          <p className="text-xs text-zinc-400 leading-relaxed">{rewrite.original}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#30d158] mb-1">Suggested rewrite</p>
+                          <p className="text-sm text-white leading-relaxed">{rewrite.rewrite}</p>
+                        </div>
+                        <p className="text-[11px] text-zinc-500">{rewrite.reason}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Best Role Matches & Keywords */}
                 <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.06] space-y-3">

@@ -89,9 +89,10 @@ export function fetchResumeConsent() {
   return request('/consents/resume-ai');
 }
 
-export function uploadAndAnalyzeResume(file) {
+export function uploadAndAnalyzeResume(file, targetRole = '') {
   const formData = new FormData();
   formData.append('resumeFile', file);
+  formData.append('targetRole', targetRole);
   return request('/resume/upload-and-analyze', { method: 'POST', body: formData, isForm: true });
 }
 

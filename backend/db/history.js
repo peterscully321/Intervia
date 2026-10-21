@@ -45,8 +45,8 @@ async function saveResumeAnalysis({ userId, fileName, resumeText, role, result, 
       resume_id: resumeId,
       role: role || null,
       result,
-      model: process.env.GEMINI_API_KEY ? 'gemini' : 'heuristic',
-      prompt_version: 'resume-v1',
+      model: 'gemini',
+      prompt_version: 'resume-v2',
       created_at: createdAt,
     });
     await batch.commit();
