@@ -170,6 +170,7 @@ export default function App() {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [resumeInputMode, setResumeInputMode] = useState('upload'); // 'upload' | 'text'
   const [isAnalyzingResume, setIsAnalyzingResume] = useState(false);
+  const [resumeProcessingStatus, setResumeProcessingStatus] = useState('');
   const [resumeResult, setResumeResult] = useState(null);
   const [resumeTargetRole, setResumeTargetRole] = useState('');
   const [resumeConsent, setResumeConsent] = useState(false);
@@ -658,7 +659,30 @@ export default function App() {
       try {
         const consent = await api.saveResumeConsent(true);
         if (consent.error) throw new Error(consent.error);
-        const data = await api.uploadAndAnalyzeResume(uploadedFile, resumeTargetRole.trim());
+        const isPdf = uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf');
+        let data;
+        if (isPdf) {
+          const { extractResumeTextFromPdf } = await import('./resumePdfOcr.js');
+          const extracted = await extractResumeTextFromPdf(uploadedFile, ({ phase, page, totalPages, progress }) => {
+            if (phase === 'loading-ocr') {
+              setResumeProcessingStatus('Loading scan reader…');
+            } else if (phase === 'ocr') {
+              const percent = Number.isFinite(progress) ? ` ${Math.round(progress * 100)}%` : '';
+              setResumeProcessingStatus(`Reading scanned page ${page}/${totalPages}${percent}…`);
+            } else {
+              setResumeProcessingStatus(`Reading PDF page ${page}/${totalPages}…`);
+            }
+          });
+          setResumeProcessingStatus('Sending extracted resume text for Gemini analysis…');
+          data = await api.analyzeResume({
+            resumeText: extracted.text,
+            targetRole: resumeTargetRole.trim(),
+            fileName: uploadedFile.name,
+          });
+        } else {
+          setResumeProcessingStatus('Extracting and analyzing document…');
+          data = await api.uploadAndAnalyzeResume(uploadedFile, resumeTargetRole.trim());
+        }
         if (data.error) throw new Error(data.message || data.error);
 
         setResumeResult(data);
@@ -669,6 +693,7 @@ export default function App() {
         showToast(`⚠️ Error: ${err.message || 'File analysis failed.'}`);
       } finally {
         setIsAnalyzingResume(false);
+        setResumeProcessingStatus('');
       }
     } else {
       // Text mode
@@ -681,6 +706,7 @@ export default function App() {
       try {
         const consent = await api.saveResumeConsent(true);
         if (consent.error) throw new Error(consent.error);
+        setResumeProcessingStatus('Sending resume text for Gemini analysis…');
         const data = await api.analyzeResume({ resumeText, targetRole: resumeTargetRole.trim() });
         if (data.error) throw new Error(data.message || data.error);
 
@@ -692,6 +718,7 @@ export default function App() {
         showToast(`⚠️ Error: ${err.message || 'Analysis failed.'}`);
       } finally {
         setIsAnalyzingResume(false);
+        setResumeProcessingStatus('');
       }
     }
   };
@@ -866,7 +893,7 @@ export default function App() {
         if (tokenData.error === 'insufficient_credits') setActiveTab('store');
         throw new Error(tokenData.message || tokenData.error);
       }
-      if (!tokenData.token || !tokenData.sessionId || !tokenData.model) throw new Error('The Live Coach could not create a secure session.');
+      if (!tokenData.token || !tokenData.sessionId || !tokenData.model || !tokenData.liveConfig) throw new Error('The Live Coach could not create a secure session.');
       if (tokenData.remaining !== undefined) setCredits(tokenData.remaining);
       liveSessionIdRef.current = tokenData.sessionId;
       liveExpiresAtRef.current = Date.parse(tokenData.expiresAt);
@@ -894,7 +921,7 @@ export default function App() {
           else resolve();
         };
         socket.onopen = () => {
-          socket.send(JSON.stringify({ setup: { model: tokenData.model } }));
+          socket.send(JSON.stringify({ setup: { model: tokenData.model, ...tokenData.liveConfig } }));
         };
         socket.onmessage = (event) => {
           let payload;
@@ -2261,7 +2288,7 @@ export default function App() {
                   {isAnalyzingResume ? (
                     <>
                       <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                      Parsing & Evaluating Document...
+                      {resumeProcessingStatus || 'Preparing Resume…'}
                     </>
                   ) : (
                     'Audit Resume (-20 Credits)'
