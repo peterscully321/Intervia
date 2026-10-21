@@ -1,40 +1,58 @@
 const crypto = require('node:crypto');
-const { getFirebaseBucket } = require('../firebase');
+const { getFirebaseBucket, isFirebaseStorageConfigured } = require('../firebase');
 const { db, toIso, jsonSafe } = require('./firestore');
 
 async function saveResumeAnalysis({ userId, fileName, resumeText, role, result, originalFile = null }) {
-  const bucket = getFirebaseBucket();
+  let bucket = null;
+  if (isFirebaseStorageConfigured()) {
+    try {
+      bucket = getFirebaseBucket();
+    } catch (error) {
+      console.warn('[Resume Analysis] Cloud Storage unavailable; extracted text will be saved in Firestore:', error.message);
+    }
+  }
   const resumeId = crypto.randomUUID();
   const resumeRef = db.collection('users').doc(userId).collection('resumes').doc(resumeId);
   const analysisRef = resumeRef.collection('analyses').doc();
   const folder = `resumes/${userId}/${resumeId}`;
-  const extractedTextKey = `${folder}/extracted.txt`;
-  const originalKey = originalFile ? `${folder}/original${fileExtension(fileName)}` : null;
+  let extractedTextKey = bucket ? `${folder}/extracted.txt` : null;
+  let originalKey = bucket && originalFile ? `${folder}/original${fileExtension(fileName)}` : null;
   const createdAt = new Date();
-  const files = [
-    { key: extractedTextKey, buffer: Buffer.from(resumeText, 'utf8'), contentType: 'text/plain; charset=utf-8' },
-  ];
-  if (originalFile) files.push({ key: originalKey, buffer: originalFile.buffer, contentType: originalFile.mimetype });
-
   const uploaded = [];
-  try {
-    for (const file of files) {
-      await bucket.file(file.key).save(file.buffer, {
-        resumable: false,
-        metadata: {
-          contentType: file.contentType,
-          cacheControl: 'private, no-store',
-          metadata: { ownerUid: userId },
-        },
-      });
-      uploaded.push(file.key);
+  if (bucket) {
+    const files = [
+      { key: extractedTextKey, buffer: Buffer.from(resumeText, 'utf8'), contentType: 'text/plain; charset=utf-8' },
+      ...(originalFile ? [{ key: originalKey, buffer: originalFile.buffer, contentType: originalFile.mimetype }] : []),
+    ];
+    try {
+      for (const file of files) {
+        await bucket.file(file.key).save(file.buffer, {
+          resumable: false,
+          metadata: {
+            contentType: file.contentType,
+            cacheControl: 'private, no-store',
+            metadata: { ownerUid: userId },
+          },
+        });
+        uploaded.push(file.key);
+      }
+    } catch (error) {
+      console.warn('[Resume Analysis] Cloud Storage upload failed; saving extracted text in Firestore:', error.message);
+      await Promise.all(uploaded.map((key) => bucket.file(key).delete({ ignoreNotFound: true }).catch(() => {})));
+      bucket = null;
+      extractedTextKey = null;
+      originalKey = null;
     }
+  }
 
+  try {
     const batch = db.batch();
     batch.create(resumeRef, {
       file_name: fileName,
       storage_key: originalKey,
       extracted_text_storage_key: extractedTextKey,
+      extracted_text: bucket ? null : resumeText,
+      original_file_saved: Boolean(originalKey),
       role: role || null,
       created_at: createdAt,
       deleted_at: null,
@@ -52,7 +70,9 @@ async function saveResumeAnalysis({ userId, fileName, resumeText, role, result, 
     await batch.commit();
     return { id: resumeId, storageKey: originalKey, extractedTextStorageKey: extractedTextKey };
   } catch (error) {
-    await Promise.all(uploaded.map((key) => bucket.file(key).delete({ ignoreNotFound: true }).catch(() => {})));
+    if (bucket) {
+      await Promise.all(uploaded.map((key) => bucket.file(key).delete({ ignoreNotFound: true }).catch(() => {})));
+    }
     throw error;
   }
 }
@@ -144,8 +164,10 @@ async function docsFor(collectionRef) {
 }
 
 async function loadResumeText(key) {
-  if (!key) return '';
-  const [buffer] = await getFirebaseBucket().file(key).download();
+  if (key && typeof key === 'object' && typeof key.extracted_text === 'string') return key.extracted_text;
+  const storageKey = typeof key === 'string' ? key : key?.extracted_text_storage_key;
+  if (!storageKey) return '';
+  const [buffer] = await getFirebaseBucket().file(storageKey).download();
   return buffer.toString('utf8');
 }
 
@@ -165,7 +187,7 @@ async function exportUserData(userId) {
   const resumeRows = await Promise.all(resumes.map(async (resume) => ({
     id: resume.id,
     file_name: resume.file_name,
-    extracted_text: await loadResumeText(resume.extracted_text_storage_key),
+    extracted_text: await loadResumeText(resume),
     role: resume.role,
     created_at: resume.created_at,
   })));

@@ -844,7 +844,6 @@ function normalizeResumeAnalysis(value) {
 app.post('/api/resume/analyze', aiRateLimit, async (req, res) => {
   const user = resolveUser(req);
   const { resumeText = '', targetRole = '', fileName = 'pasted-resume.txt' } = req.body || {};
-  if (!isFirebaseStorageConfigured()) return res.status(503).json({ error: 'Resume storage is not configured yet.' });
   if (!(await hasConsent(user.id, 'resume_ai_processing', RESUME_AI_CONSENT_VERSION))) {
     return res.status(403).json({ error: 'Consent is required before sending resume content for AI analysis.' });
   }
@@ -918,7 +917,6 @@ app.post('/api/resume/analyze', aiRateLimit, async (req, res) => {
 app.post('/api/resume/upload-and-analyze', aiRateLimit, uploadResume, async (req, res) => {
   const user = resolveUser(req);
   const { targetRole = '' } = req.body || {};
-  if (!isFirebaseStorageConfigured()) return res.status(503).json({ error: 'Resume storage is not configured yet.' });
   if (!(await hasConsent(user.id, 'resume_ai_processing', RESUME_AI_CONSENT_VERSION))) {
     return res.status(403).json({ error: 'Consent is required before sending resume content for AI analysis.' });
   }
