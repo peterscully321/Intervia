@@ -2,6 +2,12 @@
 
 Intervia helps job seekers prepare for interviews with resume feedback, role-aware mock interviews, answer coaching, and progress reports.
 
+**Live demo:** [intervia-8f24f.web.app](https://intervia-8f24f.web.app/)
+
+## Tech stack
+
+React 19, Vite, Node.js, Express, Firebase Authentication, Cloud Firestore, Gemini API, Web Speech API, Razorpay, PDFKit.
+
 ## Product foundation
 
 - React 19 + Vite web app with animated interview, resume, coach, report, and credit flows.
